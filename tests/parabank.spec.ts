@@ -1,5 +1,5 @@
-// parabank.spec.js
-const { test, expect } = require('@playwright/test');
+// parabank.spec.ts
+import { test, expect } from '@playwright/test';
 
 test.describe('ParaBank API Tests', () => {
   test('GET customer accounts returns correct data', async ({ request }) => {
