@@ -1,52 +1,66 @@
 // parabank.spec.ts
 import { test, expect } from '@playwright/test';
+import { XMLParser } from 'fast-xml-parser';
 
+const parser = new XMLParser();
+
+// Suite de tests pour l'API ParaBank
 test.describe('ParaBank API Tests', () => {
-  test('GET customer accounts returns correct data', async ({ request }) => {
-    // Make API request to get accounts for customer 13655
-    const response = await request.get('https://parabank.parasoft.com/parabank/services/bank/customers/13655/accounts', {
+
+  const getAccounts = async (request) => {
+    const response = await request.get('https://parabank.parasoft.com/parabank/services/bank/customers/13100/accounts', {
       headers: {
         'accept': 'application/xml'
       }
     });
-
-    // Verify response status
     expect(response.status()).toBe(200);
-    
-    // Convert response to text to check XML content
     const responseBody = await response.text();
-    
-    // Basic checks on XML content
-    expect(responseBody).toContain('<accounts>');
-    expect(responseBody).toContain('<customerId>13655</customerId>');
-    
-    // More specific assertions could be done with XML parsing
-    // For simple verification, we can check for expected values
-    expect(responseBody).toContain('<type>CHECKING</type>');
-    
-    // Check headers
-    const headers = response.headers();
-    expect(headers['content-type']).toContain('application/xml');
+    const data = parser.parse(responseBody);
+
+    // Gérer à la fois un seul compte et plusieurs comptes
+    let accounts = data.accounts.account;
+    if (!Array.isArray(accounts)) {
+      accounts = [accounts];
+    }
+    return accounts;
+  };
+
+  test('GET customer accounts retourne les bonnes données', async ({ request }) => {
+    const accounts = await getAccounts(request);
+
+    expect(accounts.length).toBeGreaterThan(0);
+    expect(accounts[0].customerId).toBe(13100);
+    expect(['CHECKING', 'SAVINGS']).toContain(accounts[0].type);
   });
 
-  test('Account balance should be positive', async ({ request }) => {
-    const response = await request.get('https://parabank.parasoft.com/parabank/services/bank/customers/13655/accounts', {
-      headers: {
-        'accept': 'application/xml'
-      }
-    });
-    
-    const responseBody = await response.text();
-    
-    // Extract balance value using regex
-    // Note: In a real test, you'd probably want to use a proper XML parser
-    const balanceMatch = responseBody.match(/<balance>([^<]+)<\/balance>/);
-    if (balanceMatch && balanceMatch[1]) {
-      const balance = parseFloat(balanceMatch[1]);
+  test('Le solde de chaque compte doit être positif', async ({ request }) => {
+    const accounts = await getAccounts(request);
+
+    for (const account of accounts) {
+      const balance = parseFloat(account.balance);
       expect(balance).toBeGreaterThan(0);
-      console.log(`Current balance: $${balance}`);
-    } else {
-      throw new Error('Balance not found in response');
     }
   });
+
+  test('Le client possède au moins un compte bancaire', async ({ request }) => {
+    const accounts = await getAccounts(request);
+    expect(accounts.length).toBeGreaterThan(0);
+  });
+
+  test('Tous les comptes appartiennent au bon client', async ({ request }) => {
+    const accounts = await getAccounts(request);
+
+    for (const account of accounts) {
+      expect(account.customerId).toBe(13100);
+    }
+  });
+
+  test('Type de compte est valide (CHECKING ou SAVINGS)', async ({ request }) => {
+    const accounts = await getAccounts(request);
+
+    for (const account of accounts) {
+      expect(['CHECKING', 'SAVINGS']).toContain(account.type);
+    }
+  });
+
 });
