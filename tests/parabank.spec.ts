@@ -8,7 +8,7 @@ const parser = new XMLParser();
 test.describe('ParaBank API Tests', () => {
 
   const getAccounts = async (request) => {
-    const response = await request.get('https://parabank.parasoft.com/parabank/services/bank/customers/13100/accounts', {
+    const response = await request.get('https://parabank.parasoft.com/parabank/services/bank/customers/13544/accounts', {
       headers: {
         'accept': 'application/xml'
       }
@@ -29,7 +29,7 @@ test.describe('ParaBank API Tests', () => {
     const accounts = await getAccounts(request);
 
     expect(accounts.length).toBeGreaterThan(0);
-    expect(accounts[0].customerId).toBe(13100);
+    expect(accounts[0].customerId).toBe(13544);
     expect(['CHECKING', 'SAVINGS']).toContain(accounts[0].type);
   });
 
@@ -51,7 +51,7 @@ test.describe('ParaBank API Tests', () => {
     const accounts = await getAccounts(request);
 
     for (const account of accounts) {
-      expect(account.customerId).toBe(13100);
+      expect(account.customerId).toBe(13544);
     }
   });
 
